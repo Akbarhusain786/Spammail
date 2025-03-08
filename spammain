@@ -1,0 +1,144 @@
+# Import necessary libraries
+import numpy as np  # For numerical operations
+import pandas as pd  # For data manipulation and analysis
+import matplotlib.pyplot as plt  # For data visualization
+import seaborn as sns  # For enhanced data visualization
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, roc_curve, classification_report  # For model evaluation metrics
+from wordcloud import WordCloud, STOPWORDS  # For generating word clouds
+from sklearn.feature_extraction.text import CountVectorizer  # For converting text into numerical features
+from sklearn.model_selection import train_test_split  # For splitting data into training and testing sets
+from sklearn.naive_bayes import MultinomialNB  # Naive Bayes classifier for text classification
+from sklearn.pipeline import Pipeline  # For creating a machine learning pipeline
+import warnings  # To handle warnings
+warnings.filterwarnings('ignore')  # Ignore warnings during execution
+
+# Flask for creating a web-based frontend
+from flask import Flask, request, render_template_string
+
+# Hardcoded dataset for spam and ham (non-spam) emails
+data = {
+    "Category": ["ham", "spam", "ham", "spam", "ham", "spam", "ham", "ham", "spam", "ham"],  # Labels for spam/ham
+    "Message": [  # Example email messages
+        "Hey, how are you?",
+        "Free entry in 2 a weekly comp to win FA Cup final tkts 21st May 2005.",
+        "I will call you later.",
+        "Congratulations! You've won a $1000 Walmart gift card. Click here to claim now.",
+        "Can we meet tomorrow?",
+        "URGENT: You have won a 1-week FREE membership in our $100,000 prize Jackpot!",
+        "I'll be there in 10 minutes.",
+        "Let's grab lunch today.",
+        "You have been selected for a free iPhone! Click here to claim.",
+        "See you at the party tonight!"
+    ]
+}
+
+# Create a DataFrame from the hardcoded dataset
+df = pd.DataFrame(data)
+
+# Data Preprocessing: Convert 'Category' column into binary labels (1 for spam, 0 for ham)
+df['Spam'] = df['Category'].apply(lambda x: 1 if x == 'spam' else 0)
+
+# Split the dataset into training and testing sets
+# X_train: Training messages, X_test: Testing messages, y_train: Training labels, y_test: Testing labels
+X_train, X_test, y_train, y_test = train_test_split(df.Message, df.Spam, test_size=0.25, random_state=42)
+
+# Create a machine learning pipeline
+# The pipeline consists of two steps:
+# 1. CountVectorizer: Converts text into a matrix of token counts
+# 2. MultinomialNB: Naive Bayes classifier for text classification
+clf = Pipeline([
+    ('vectorizer', CountVectorizer()),  # Step 1: Convert text to numerical features
+    ('nb', MultinomialNB())  # Step 2: Train a Naive Bayes classifier
+])
+
+# Train the model using the training data
+clf.fit(X_train, y_train)
+
+# Function to detect spam in an email text
+def detect_spam(email_text):
+    # Predict whether the email is spam (1) or ham (0)
+    prediction = clf.predict([email_text])
+    # Return a user-friendly message based on the prediction
+    return "This is a Spam Email!" if prediction[0] == 1 else "This is a Ham Email!"
+
+# Initialize the Flask app
+app = Flask(__name__)
+
+# HTML template for the frontend (embedded in Python for simplicity)
+html_template = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spam Detector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 50px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Spam Detector</h1>
+        <form method="POST">
+            <textarea name="email_text" placeholder="Enter email text here..."></textarea>
+            <button type="submit">Check for Spam</button>
+        </form>
+        {% if result %}
+        <div class="result">
+            <strong>Result:</strong> {{ result }}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+'''
+
+# Flask route for the home page
+@app.route('/', methods=['GET', 'POST'])
+def home():
+    result = None  # Initialize result as None
+    if request.method == 'POST':  # If the form is submitted
+        email_text = request.form['email_text']  # Get the email text from the form
+        result = detect_spam(email_text)  # Detect if the email is spam or ham
+    # Render the HTML template with the result (if any)
+    return render_template_string(html_template, result=result)
+
+# Run the Flask app
+if __name__ == '__main__':
+    app.run(debug=True)  # Start the app in debug mode
