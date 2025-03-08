@@ -14,6 +14,13 @@ Description:-  I developed a Spam Detection System using machine learning to cla
 
 
 Output:-
+
+
+
+
+
+
+
 ![Screenshot from 2025-03-08 17-31-44](https://github.com/user-attachments/assets/11198890-d319-4462-8e6d-f7910e3d7dac)
 
 
